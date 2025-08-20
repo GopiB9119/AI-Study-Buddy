@@ -1,0 +1,10 @@
+node_modules
+dist
+*.local
+.env
+.DS_Store
+.vscode
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
