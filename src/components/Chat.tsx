@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { Message } from '../types/message';
 import { askAI } from '../services/api';
 
@@ -106,6 +108,44 @@ function AILogo({ isTyping = false, size = 24, className = '' }: AILogoProps) {
         />
       </svg>
     </div>
+  );
+}
+
+// Render message content: detect numbered or bulleted lists and render as HTML lists
+function renderMessageContent(raw: string | undefined) {
+  const text = (raw || '').toString();
+
+  // Split into lines and detect list patterns
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return (
+    <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">{text}</p>
+  );
+
+  // Detect numbered list (e.g., "1.", "1)") and bullet markers (-, *, •)
+  const isNumbered = lines.every(l => /^\d+([\.)])\s+/.test(l));
+  const isBulleted = lines.every(l => /^(-|\*|•)\s+/.test(l));
+
+  if (isNumbered) {
+    const items = lines.map(l => l.replace(/^\d+([\.)])\s+/, ''));
+    return (
+      <ol className="list-decimal list-inside leading-relaxed space-y-2 text-sm lg:text-base">
+        {items.map((item, i) => <li key={i}>{item}</li>)}
+      </ol>
+    );
+  }
+
+  if (isBulleted) {
+    const items = lines.map(l => l.replace(/^(-|\*|•)\s+/, ''));
+    return (
+      <ul className="list-disc list-inside leading-relaxed space-y-2 text-sm lg:text-base">
+        {items.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    );
+  }
+
+  // Fallback: preserve line breaks
+  return (
+    <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">{text}</p>
   );
 }
 
@@ -312,9 +352,13 @@ export default function Chat() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">
-                    {message.content}
-                  </p>
+                                  {message.role === 'assistant' ? (
+                                    <ReactMarkdown rehypePlugins={[rehypeSanitize]} className="prose text-sm lg:text-base">
+                                      {message.content || ''}
+                                    </ReactMarkdown>
+                                  ) : (
+                                    renderMessageContent(message.content)
+                                  )}
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
                     <span className="text-xs text-white/60">
                       {new Date().toLocaleTimeString()}

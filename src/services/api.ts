@@ -36,6 +36,31 @@ async function callGemini(prompt: string): Promise<string> {
   }
 }
 
+// Clean up numbered/step-formatted responses so they read well in the UI.
+function cleanNumberedSteps(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+
+  let s = text;
+
+  // Ensure there is a space after numbered markers like "1." or "1)" when missing: "1.Step" -> "1. Step"
+  s = s.replace(/(\d+)([\.\)])(?=\S)/g, '$1$2 ');
+
+  // Insert a newline before any numbered step that directly follows text (e.g. "...text1.")
+  // We add a newline when a digit+dot sequence appears and the previous character is not a newline.
+  s = s.replace(/([^\n])(?:\s*)(\d+\.)/g, '$1\n$2');
+
+  // Also handle patterns where numbers are concatenated like "1.2.3." — break before each numbered token
+  s = s.replace(/(\d+\.)/g, '\n$1');
+
+  // Convert sequences of multiple newlines into a single blank line
+  s = s.replace(/\n{2,}/g, '\n\n');
+
+  // Trim leading/trailing whitespace
+  s = s.trim();
+
+  return s;
+}
+
 // Basic chat functionality
 export async function askAI(question: string): Promise<string> {
   const prompt = `You are a helpful study buddy AI. Answer the following question in a clear, educational way:
@@ -44,7 +69,8 @@ Question: ${question}
 
 Please provide a comprehensive but concise answer that helps the user learn.`;
 
-  return await callGemini(prompt);
+  const raw = await callGemini(prompt);
+  return cleanNumberedSteps(raw);
 }
 
 // Generate flashcards for a given topic
@@ -65,9 +91,9 @@ Topic: ${topic}`;
 
   try {
     const response = await callGemini(prompt);
-    
-    // Try to extract JSON from the response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    const cleaned = cleanNumberedSteps(response);
+    // Try to extract JSON from the cleaned response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const flashcards = JSON.parse(jsonMatch[0]);
       return flashcards.map((card: any, index: number) => ({
@@ -121,9 +147,9 @@ Topic: ${topic}`;
 
   try {
     const response = await callGemini(prompt);
-    
-    // Try to extract JSON from the response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    const cleaned = cleanNumberedSteps(response);
+    // Try to extract JSON from the cleaned response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const quizQuestions = JSON.parse(jsonMatch[0]);
       return quizQuestions.map((q: any, index: number) => ({
@@ -177,9 +203,9 @@ Topic: ${topic}`;
 
   try {
     const response = await callGemini(prompt);
-    
-    // Try to extract JSON from the response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    const cleaned = cleanNumberedSteps(response);
+    // Try to extract JSON from the cleaned response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const companyQuestions = JSON.parse(jsonMatch[0]);
       return companyQuestions.map((q: any, index: number) => ({
