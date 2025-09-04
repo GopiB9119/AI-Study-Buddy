@@ -57,6 +57,12 @@ export default async (req, res) => {
     return;
   }
 
+  if (!GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not configured in environment');
+    res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server' });
+    return;
+  }
+
   if (req.method === 'POST') {
     try {
       const { topic } = req.body;
