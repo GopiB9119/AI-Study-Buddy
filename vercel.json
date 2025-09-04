@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/*.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/ask",
+      "destination": "/api/ask"
+    },
+    {
+      "source": "/api/flashcards", 
+      "destination": "/api/flashcards"
+    },
+    {
+      "source": "/api/quiz",
+      "destination": "/api/quiz"
+    }
+  ]
+}

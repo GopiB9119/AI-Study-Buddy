@@ -1,4 +1,3 @@
-import { json } from 'micro';
 import fetch from 'node-fetch';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -50,30 +49,35 @@ async function callGeminiAPI(prompt) {
 }
 
 export default async (req, res) => {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method === 'POST') {
     try {
-      const body = await json(req);
-      const { topic } = body;
+      const { topic } = req.body;
       if (!topic) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: 'Topic is required' }));
+        res.status(400).json({ error: 'Topic is required' });
         return;
       }
       const prompt = `Generate 5 multiple choice quiz questions for the topic: "${topic}".\n\nFormat your response as a valid JSON array of objects, where each object has:\n- \"question\": the quiz question\n- \"options\": array of 4 possible answers\n- \"correctAnswer\": the correct answer (must match one of the options exactly)\n- \"explanation\": brief explanation of why the answer is correct\n\nReturn ONLY the JSON array, no additional text or formatting.`;
       const response = await callGeminiAPI(prompt);
       const parsed = extractJsonArray(response || '');
-      res.setHeader('Content-Type', 'application/json');
       if (!parsed) {
-        res.end(JSON.stringify({ response, warning: 'AI output could not be validated; returned raw text.' }));
+        res.status(200).json({ response, warning: 'AI output could not be validated; returned raw text.' });
       } else {
-        res.end(JSON.stringify({ response }));
+        res.status(200).json({ response });
       }
     } catch (error) {
-      res.statusCode = 500;
-      res.end(JSON.stringify({ error: error.message }));
+      res.status(500).json({ error: error.message });
     }
   } else {
-    res.statusCode = 405;
-    res.end('Method Not Allowed');
+    res.status(405).json({ error: 'Method Not Allowed' });
   }
 };

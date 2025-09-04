@@ -16,14 +16,12 @@ interface GeminiResponse {
 // Helper function to make requests to Gemini API via our proxy
 async function callGemini(prompt: string): Promise<string> {
   try {
-    const response = await fetch(`/api${prompt.includes('flashcards') ? '/flashcards' : prompt.includes('multiple choice quiz') ? '/quiz' : '/index'}`, {
+    const response = await fetch(`${API_BASE}/ask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(prompt.includes('flashcards') || prompt.includes('multiple choice quiz')
-        ? { topic: prompt.match(/Topic: (.*)/)?.[1] || '' }
-        : { prompt }),
+      body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
@@ -77,23 +75,21 @@ Please provide a comprehensive but concise answer that helps the user learn.`;
 
 // Generate flashcards for a given topic
 export async function generateFlashcards(topic: string): Promise<Flashcard[]> {
-  const prompt = `Generate 6 educational flashcards for the topic: "${topic}". 
-
-Format your response as a valid JSON array of objects, where each object has "question" and "answer" properties. Make sure the questions are clear and the answers are informative but concise.
-
-Example format:
-[
-  {
-    "question": "What is the main concept?",
-    "answer": "The main concept is..."
-  }
-]
-
-Topic: ${topic}`;
-
   try {
-    const response = await callGemini(prompt);
-    const cleaned = cleanNumberedSteps(response);
+    const response = await fetch(`${API_BASE}/flashcards`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ topic }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const cleaned = cleanNumberedSteps(data.response);
     // Try to extract JSON from the cleaned response
     const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
@@ -109,7 +105,7 @@ Topic: ${topic}`;
       {
         id: `fallback-${Date.now()}`,
         question: `What is ${topic}?`,
-        answer: response.substring(0, 200) + '...'
+        answer: data.response.substring(0, 200) + '...'
       }
     ];
   } catch (error) {
@@ -127,29 +123,21 @@ Topic: ${topic}`;
 
 // Generate quiz questions for a given topic
 export async function generateQuiz(topic: string): Promise<QuizQ[]> {
-  const prompt = `Generate 5 multiple choice quiz questions for the topic: "${topic}". 
-
-Format your response as a valid JSON array of objects, where each object has:
-- "question": the quiz question
-- "options": array of 4 possible answers
-- "correctAnswer": the correct answer (must match one of the options exactly)
-- "explanation": brief explanation of why the answer is correct
-
-Example format:
-[
-  {
-    "question": "What is...?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": "Option B",
-    "explanation": "Option B is correct because..."
-  }
-]
-
-Topic: ${topic}`;
-
   try {
-    const response = await callGemini(prompt);
-    const cleaned = cleanNumberedSteps(response);
+    const response = await fetch(`${API_BASE}/quiz`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ topic }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const cleaned = cleanNumberedSteps(data.response);
     // Try to extract JSON from the cleaned response
     const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (jsonMatch) {

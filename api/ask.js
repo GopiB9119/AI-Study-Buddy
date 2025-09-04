@@ -58,7 +58,7 @@ export default async (req, res) => {
       const response = await callGeminiAPI(prompt);
       res.status(200).json({ response });
     } catch (error) {
-      console.error('Error in /api/index:', error);
+      console.error('Error in /api/ask:', error);
       res.status(500).json({ error: error.message });
     }
   } else {
