@@ -16,12 +16,14 @@ interface GeminiResponse {
 // Helper function to make requests to Gemini API via our proxy
 async function callGemini(prompt: string): Promise<string> {
   try {
-    const response = await fetch(`${API_BASE}/ask`, {
+    const response = await fetch(`/api${prompt.includes('flashcards') ? '/flashcards' : prompt.includes('multiple choice quiz') ? '/quiz' : '/index'}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify(prompt.includes('flashcards') || prompt.includes('multiple choice quiz')
+        ? { topic: prompt.match(/Topic: (.*)/)?.[1] || '' }
+        : { prompt }),
     });
 
     if (!response.ok) {
